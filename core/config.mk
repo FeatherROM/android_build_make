@@ -141,8 +141,8 @@ $(KATI_obsolete_var \
   LOCAL_AUX_OS_VARIANT \
   LOCAL_AUX_SUBARCH \
   LOCAL_AUX_TOOLCHAIN \
-  LOCAL_CUSTOM_BUILD_STEP_INPUT \
-  LOCAL_CUSTOM_BUILD_STEP_OUTPUT \
+  LOCAL_FEATHER_BUILD_STEP_INPUT \
+  LOCAL_FEATHER_BUILD_STEP_OUTPUT \
   LOCAL_IS_AUX_MODULE \
   ,AUX support has been removed)
 $(KATI_obsolete_var HOST_OUT_TEST_CONFIG TARGET_OUT_TEST_CONFIG LOCAL_TEST_CONFIG_OPTIONS)
@@ -441,6 +441,9 @@ endif
 FIND_LEAVES_EXCLUDES := $(addprefix --prune=, $(SCAN_EXCLUDE_DIRS) .repo .git)
 
 -include vendor/extra/BoardConfigExtra.mk
+ifneq ($(FEATHER_BUILD),)
+include vendor/feather/config/BoardConfigFeather.mk
+endif
 
 # The build system exposes several variables for where to find the kernel
 # headers:
@@ -697,10 +700,10 @@ CHECK_ELF_FILE := $(HOST_OUT_EXECUTABLES)/check_elf_file$(HOST_EXECUTABLE_SUFFIX
 LPMAKE := $(HOST_OUT_EXECUTABLES)/lpmake$(HOST_EXECUTABLE_SUFFIX)
 ADD_IMG_TO_TARGET_FILES := $(HOST_OUT_EXECUTABLES)/add_img_to_target_files$(HOST_EXECUTABLE_SUFFIX)
 BUILD_IMAGE := $(HOST_OUT_EXECUTABLES)/build_image$(HOST_EXECUTABLE_SUFFIX)
-ifeq (,$(strip $(BOARD_CUSTOM_BUILD_SUPER_IMAGE)))
+ifeq (,$(strip $(BOARD_FEATHER_BUILD_SUPER_IMAGE)))
 BUILD_SUPER_IMAGE := $(HOST_OUT_EXECUTABLES)/build_super_image$(HOST_EXECUTABLE_SUFFIX)
 else
-BUILD_SUPER_IMAGE := $(BOARD_CUSTOM_BUILD_SUPER_IMAGE)
+BUILD_SUPER_IMAGE := $(BOARD_FEATHER_BUILD_SUPER_IMAGE)
 endif
 IMG_FROM_TARGET_FILES := $(HOST_OUT_EXECUTABLES)/img_from_target_files$(HOST_EXECUTABLE_SUFFIX)
 UNPACK_BOOTIMG := $(HOST_OUT_EXECUTABLES)/unpack_bootimg
@@ -1251,6 +1254,14 @@ include $(BUILD_SYSTEM)/sysprop_config.mk
 # consistency with those defined in BoardConfig.mk files.
 include $(BUILD_SYSTEM)/android_soong_config_vars.mk
 
+ifneq ($(FEATHER_BUILD),)
+ifneq ($(wildcard device/feather/sepolicy/common/sepolicy.mk),)
+## We need to be sure the global selinux policies are included
+## last, to avoid accidental resetting by device configs
+$(eval include device/feather/sepolicy/common/sepolicy.mk)
+endif
+endif
+
 ifeq ($(CALLED_FROM_SETUP),true)
 include $(BUILD_SYSTEM)/ninja_config.mk
 include $(BUILD_SYSTEM)/soong_config.mk
@@ -1259,6 +1270,9 @@ endif
 -include external/ltp/android/ltp_package_list.mk
 DEFAULT_DATA_OUT_MODULES := ltp $(ltp_packages)
 .KATI_READONLY := DEFAULT_DATA_OUT_MODULES
+
+# Include any vendor specific config.mk file
+-include vendor/*/build/core/config.mk
 
 include $(BUILD_SYSTEM)/dumpvar.mk
 
